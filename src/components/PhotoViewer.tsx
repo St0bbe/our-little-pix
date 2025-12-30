@@ -2,6 +2,7 @@ import { Photo, categoryLabels } from '@/types/photo';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CommentsSection } from '@/components/CommentsSection';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar, User, Download, Heart, Share2, Check, Edit, Play } from 'lucide-react';
@@ -16,6 +17,8 @@ interface PhotoViewerProps {
   onShare?: (photoId: string) => string;
   onEdit?: (photo: Photo) => void;
   onSlideshow?: () => void;
+  onAddComment?: (photoId: string, text: string) => void;
+  currentUserEmail?: string;
 }
 
 const downloadPhoto = (photo: Photo) => {
@@ -34,7 +37,9 @@ export const PhotoViewer = ({
   onToggleFavorite, 
   onShare,
   onEdit,
-  onSlideshow 
+  onSlideshow,
+  onAddComment,
+  currentUserEmail
 }: PhotoViewerProps) => {
   const [copied, setCopied] = useState(false);
 
@@ -96,10 +101,27 @@ export const PhotoViewer = ({
             </p>
           )}
           
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <Calendar className="w-4 h-4" />
-            <span>{formattedDate}</span>
+          <div className="flex items-center gap-4 text-muted-foreground text-sm">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              <span>{formattedDate}</span>
+            </div>
+            {photo.uploadedBy && (
+              <div className="flex items-center gap-1 text-xs">
+                <User className="w-3 h-3" />
+                <span className="capitalize">{photo.uploadedBy.split('@')[0]}</span>
+              </div>
+            )}
           </div>
+
+          {/* Comments section */}
+          {onAddComment && currentUserEmail && (
+            <CommentsSection
+              comments={photo.comments || []}
+              currentUserEmail={currentUserEmail}
+              onAddComment={(text) => onAddComment(photo.id, text)}
+            />
+          )}
 
           {/* Action buttons */}
           <div className="flex flex-wrap gap-2 pt-2">
