@@ -2,6 +2,13 @@ export type PhotoCategory = 'sozinha' | 'com-pais' | 'parentes-amigos';
 
 export type ChildName = string;
 
+export interface Comment {
+  id: string;
+  userEmail: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface Photo {
   id: string;
   url: string;
@@ -12,6 +19,18 @@ export interface Photo {
   description?: string;
   albumId?: string;
   isFavorite?: boolean;
+  uploadedBy?: string;
+  comments?: Comment[];
+  createdAt: string;
+}
+
+export interface ActivityItem {
+  id: string;
+  type: 'photo_added' | 'comment_added' | 'photo_favorited';
+  userEmail: string;
+  photoId?: string;
+  photoTitle?: string;
+  commentText?: string;
   createdAt: string;
 }
 

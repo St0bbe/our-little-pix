@@ -15,6 +15,7 @@ import { Slideshow } from '@/components/Slideshow';
 import { EditPhotoModal } from '@/components/EditPhotoModal';
 import { BackupExport } from '@/components/BackupExport';
 import { PrintMode } from '@/components/PrintMode';
+import { ActivityLog } from '@/components/ActivityLog';
 import { usePhotos } from '@/hooks/usePhotos';
 import { usePhotoNotifications } from '@/hooks/usePhotoNotifications';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,16 +23,16 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Photo, PhotoCategory } from '@/types/photo';
-import { Plus, Camera, Heart, Grid, Clock, FolderHeart, Download, Settings, LogOut, Star, BarChart3, Play, MoreHorizontal, FileArchive, Printer } from 'lucide-react';
+import { Plus, Camera, Heart, Grid, Clock, FolderHeart, Download, Settings, LogOut, Star, BarChart3, Play, MoreHorizontal, FileArchive, Printer, Activity } from 'lucide-react';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
 
 const Index = () => {
   const { 
-    photos, albums, children, 
+    photos, albums, children, activities,
     addPhotos, deletePhoto, filterPhotos, updatePhoto,
     addAlbum, toggleFavorite, getFavorites,
-    createShareLink, getSharedContent 
+    createShareLink, getSharedContent, addComment
   } = usePhotos();
   
   const { isAuthenticated, isLoading, currentUser, login, logout, changePassword, hasUserRegistered } = useAuth();
@@ -288,7 +289,7 @@ const Index = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-5">
+          <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-6">
             <TabsTrigger value="gallery" className="gap-1 text-xs sm:text-sm">
               <Grid className="w-4 h-4" />
               <span className="hidden sm:inline">Galeria</span>
@@ -308,6 +309,10 @@ const Index = () => {
             <TabsTrigger value="stats" className="gap-1 text-xs sm:text-sm">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Stats</span>
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="gap-1 text-xs sm:text-sm">
+              <Activity className="w-4 h-4" />
+              <span className="hidden sm:inline">Atividade</span>
             </TabsTrigger>
           </TabsList>
 
@@ -365,6 +370,16 @@ const Index = () => {
           <TabsContent value="stats">
             <StatsView photos={photos} children={children} />
           </TabsContent>
+
+          <TabsContent value="activity">
+            <ActivityLog 
+              activities={activities} 
+              onViewPhoto={(photoId) => {
+                const photo = photos.find(p => p.id === photoId);
+                if (photo) setViewingPhoto(photo);
+              }}
+            />
+          </TabsContent>
         </Tabs>
 
         {/* Footer */}
@@ -385,6 +400,7 @@ const Index = () => {
         existingChildren={children}
         albums={albums}
         onPhotosAdded={updatePhotoCount}
+        currentUserEmail={currentUser?.email}
       />
 
       <CreateAlbumModal
@@ -404,10 +420,12 @@ const Index = () => {
         photo={viewingPhoto}
         isOpen={!!viewingPhoto}
         onClose={() => setViewingPhoto(null)}
-        onToggleFavorite={toggleFavorite}
+        onToggleFavorite={(id) => toggleFavorite(id, currentUser?.email)}
         onShare={handleSharePhoto}
         onEdit={setEditingPhoto}
         onSlideshow={startSlideshowFromPhoto}
+        onAddComment={(photoId, text) => addComment(photoId, text, currentUser?.email || '')}
+        currentUserEmail={currentUser?.email}
       />
 
       <EditPhotoModal

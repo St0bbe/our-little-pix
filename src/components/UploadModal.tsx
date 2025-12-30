@@ -20,10 +20,11 @@ interface UploadModalProps {
     title?: string;
     description?: string;
     albumId?: string;
-  }>, onPhotosAdded?: (count: number) => void) => void;
+  }>, onPhotosAdded?: (count: number) => void, userEmail?: string) => void;
   existingChildren: string[];
   albums: Album[];
   onPhotosAdded?: (count: number) => void;
+  currentUserEmail?: string;
 }
 
 interface PendingPhoto {
@@ -33,7 +34,7 @@ interface PendingPhoto {
   description: string;
 }
 
-export const UploadModal = ({ isOpen, onClose, onUpload, existingChildren, albums, onPhotosAdded }: UploadModalProps) => {
+export const UploadModal = ({ isOpen, onClose, onUpload, existingChildren, albums, onPhotosAdded, currentUserEmail }: UploadModalProps) => {
   const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [category, setCategory] = useState<PhotoCategory>('sozinha');
@@ -92,7 +93,7 @@ export const UploadModal = ({ isOpen, onClose, onUpload, existingChildren, album
       albumId: albumId !== 'none' ? albumId : undefined,
     }));
 
-    onUpload(photos, onPhotosAdded);
+    onUpload(photos, onPhotosAdded, currentUserEmail);
     toast.success(`${photos.length} foto(s) adicionada(s) com sucesso!`);
     
     // Reset form

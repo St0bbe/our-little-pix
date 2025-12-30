@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
-import { Photo, PhotoCategory, Album, SharedLink, defaultAlbums } from '@/types/photo';
+import { useState, useEffect, useMemo } from 'react';
+import { Photo, PhotoCategory, Album, SharedLink, ActivityItem, Comment, defaultAlbums } from '@/types/photo';
 
 const PHOTOS_KEY = 'family-photos';
 const ALBUMS_KEY = 'family-albums';
 const SHARED_LINKS_KEY = 'family-shared-links';
+const ACTIVITIES_KEY = 'family-activities';
 
 export const usePhotos = () => {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
   const [sharedLinks, setSharedLinks] = useState<SharedLink[]>([]);
   const [children, setChildren] = useState<string[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
 
   useEffect(() => {
     // Load photos
@@ -41,13 +43,32 @@ export const usePhotos = () => {
     if (storedLinks) {
       setSharedLinks(JSON.parse(storedLinks));
     }
+
+    // Load activities
+    const storedActivities = localStorage.getItem(ACTIVITIES_KEY);
+    if (storedActivities) {
+      setActivities(JSON.parse(storedActivities));
+    }
   }, []);
 
-  const addPhotos = (newPhotos: Omit<Photo, 'id' | 'createdAt'>[], onPhotosAdded?: (count: number) => void) => {
+  const addActivity = (activity: Omit<ActivityItem, 'id' | 'createdAt'>) => {
+    const newActivity: ActivityItem = {
+      ...activity,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
+    const updatedActivities = [newActivity, ...activities].slice(0, 100); // Keep last 100
+    setActivities(updatedActivities);
+    localStorage.setItem(ACTIVITIES_KEY, JSON.stringify(updatedActivities));
+  };
+
+  const addPhotos = (newPhotos: Omit<Photo, 'id' | 'createdAt'>[], onPhotosAdded?: (count: number) => void, userEmail?: string) => {
     const photosWithIds = newPhotos.map(photo => ({
       ...photo,
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
+      uploadedBy: userEmail,
+      comments: [],
     }));
 
     const updatedPhotos = [...photos, ...photosWithIds];
@@ -56,6 +77,18 @@ export const usePhotos = () => {
 
     const uniqueChildren = [...new Set(updatedPhotos.map(p => p.childName))];
     setChildren(uniqueChildren);
+
+    // Add activity for each photo
+    if (userEmail) {
+      photosWithIds.forEach(photo => {
+        addActivity({
+          type: 'photo_added',
+          userEmail,
+          photoId: photo.id,
+          photoTitle: photo.title || photo.childName,
+        });
+      });
+    }
     
     // Notify about the new count for cross-tab notifications
     if (onPhotosAdded) {
@@ -71,11 +104,44 @@ export const usePhotos = () => {
     localStorage.setItem(PHOTOS_KEY, JSON.stringify(updatedPhotos));
   };
 
-  const toggleFavorite = (id: string) => {
+  const toggleFavorite = (id: string, userEmail?: string) => {
     const photo = photos.find(p => p.id === id);
     if (photo) {
-      updatePhoto(id, { isFavorite: !photo.isFavorite });
+      const newFavoriteState = !photo.isFavorite;
+      updatePhoto(id, { isFavorite: newFavoriteState });
+      
+      if (newFavoriteState && userEmail) {
+        addActivity({
+          type: 'photo_favorited',
+          userEmail,
+          photoId: id,
+          photoTitle: photo.title || photo.childName,
+        });
+      }
     }
+  };
+
+  const addComment = (photoId: string, text: string, userEmail: string) => {
+    const photo = photos.find(p => p.id === photoId);
+    if (!photo) return;
+
+    const newComment: Comment = {
+      id: crypto.randomUUID(),
+      userEmail,
+      text,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedComments = [...(photo.comments || []), newComment];
+    updatePhoto(photoId, { comments: updatedComments });
+
+    addActivity({
+      type: 'comment_added',
+      userEmail,
+      photoId,
+      photoTitle: photo.title || photo.childName,
+      commentText: text,
+    });
   };
 
   const deletePhoto = (id: string) => {
@@ -182,6 +248,7 @@ export const usePhotos = () => {
     albums,
     children,
     sharedLinks,
+    activities,
     addPhotos,
     updatePhoto,
     toggleFavorite,
@@ -194,5 +261,7 @@ export const usePhotos = () => {
     getAlbumPhotos,
     createShareLink,
     getSharedContent,
+    addComment,
+    addActivity,
   };
 };
